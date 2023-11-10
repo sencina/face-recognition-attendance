@@ -1,8 +1,7 @@
 import face_recognition
 from PIL import Image, ImageDraw
 import numpy as np
-import pinecone
-import os
+from pinecone_client import query
 
 test_image = face_recognition.load_image_file("../images/test/santi_test_1.jpg")
 
@@ -10,17 +9,8 @@ test_image = face_recognition.load_image_file("../images/test/santi_test_1.jpg")
 test_encodings = face_recognition.face_encodings(test_image)
 test_locations = face_recognition.face_locations(test_image)
 
-# Initialize Pinecone
-pinecone.init(api_key=os.environ.get("PINECONE_API_KEY"), environment=os.environ.get("PINECONE_ENVIRONMENT"))
-index = pinecone.Index(os.environ.get("PINECONE_INDEX_NAME"))
-
 # Fetches the predominant face in the image
-data = index.query(
-  vector= test_encodings[0].tolist(), # Choose the first face in the image (predominant face)
-  top_k=1,
-  include_metadata=True,
-  include_values=True
-)
+data = query(test_encodings[0].tolist(), top_k=1, include_metadata=True, include_values=True)
 
 # Create an array with the know (pinecone) face encodings of the faces in the image
 known_face_encodings = [data.matches[0].values]
@@ -50,9 +40,8 @@ for (top, right, bottom, left), face_encoding in zip(test_locations, test_encodi
     draw.rectangle(((left, top), (right, bottom)), outline=(0, 0, 255))
 
     # Draw a label with a name below the face
-    _, _, text_width, text_height = draw.textbbox((left, bottom - 10), name, font=None)
-    draw.rectangle(((left, bottom - text_height - 10), (right, bottom)), fill=None, outline=(0, 0, 255))
-    draw.text((left + 6, bottom - text_height - 5), name, fill=(255, 255, 255, 255))
+    _, _, text_width, text_height = draw.textbbox((left, bottom - 300), name, font=None)
+    draw.text((left + 6, bottom - text_height - 150), name, fill=(255, 255, 255, 255))
 
 
 # Remove the drawing library from memory as per the Pillow docs
