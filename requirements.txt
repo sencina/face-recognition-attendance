@@ -1,0 +1,5 @@
+pinecone-client
+pandas
+scikit-image
+numpy
+face_recognition
