@@ -1,4 +1,4 @@
-export PINECONE_API_KEY= "pinecone api key"
-export PINECONE_ENVIRONMENT= "environment in which the index is running"
-export PINECONE_CONNECTION_URL= "pinecone index host"
-export PINECONE_INDEX_NAME= "index name"
+export PINECONE_API_KEY=pinecone api key
+export PINECONE_ENVIRONMENT=environment in which the index is running
+export PINECONE_CONNECTION_URL=pinecone index host
+export PINECONE_INDEX_NAME=index name
