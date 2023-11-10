@@ -65,7 +65,7 @@ def attendance():
 
     temp.close()
     os.unlink(temp.name)
-    return attndees, 201
+    return attndees, 200
 
 if __name__ == '__main__':
     app.run(port=8000,debug=True)
