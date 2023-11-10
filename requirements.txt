@@ -3,3 +3,5 @@ pandas
 scikit-image
 numpy
 face_recognition
+flask
+flask_cors
