@@ -5,3 +5,4 @@ numpy
 face_recognition
 flask
 flask_cors
+pillow
