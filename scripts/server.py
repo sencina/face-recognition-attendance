@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image, ImageDraw
 import io
@@ -12,6 +12,10 @@ TRESHOLD = 0.95
 
 app = Flask(__name__)
 CORS(app, support_credentials=True, resources={r"/*": {"origins": "*"}})
+
+ANNOTATED_IMAGES_DIR = 'annotated_images'
+if not os.path.exists(ANNOTATED_IMAGES_DIR):
+    os.makedirs(ANNOTATED_IMAGES_DIR)
 
 @app.route('/health')
 def home():
@@ -34,14 +38,18 @@ def upload_image(name):
         os.unlink(temp.name)
         return jsonify({'error': 'No face detected in the uploaded image'}), 400
 
-    draw = ImageDraw.Draw(loaded_image)
+    # Convert NumPy array to Image object
+    loaded_image_pil = Image.fromarray(loaded_image)
+
+    draw = ImageDraw.Draw(loaded_image_pil)
 
     for face_location in face_locations:
         top, right, bottom, left = face_location
         draw.rectangle([left, top, right, bottom], outline="red", width=2)
 
     tagged_image_buffer = io.BytesIO()
-    loaded_image.save(tagged_image_buffer, format='JPEG')
+    loaded_image_pil.save(tagged_image_buffer, format='JPEG')
+    tagged_image_buffer.seek(0)  # Move the cursor to the beginning of the buffer
 
     encoding = face_encodings[0].tolist()
 
@@ -61,7 +69,55 @@ def upload_image(name):
     temp.close()
     os.unlink(temp.name)
 
-    return jsonify({'message': 'Face detected and tagged successfully', 'tagged_image': tagged_image_buffer.getvalue().hex()}), 200
+    return jsonify({'message': 'Face detected and tagged successfully', 'tagged_image': tagged_image_buffer.getvalue().hex()}), 201
+
+
+@app.route('/attendance', methods=['POST'])
+def attendance():
+    try:
+        image_data = request.get_data()
+        image = Image.open(io.BytesIO(image_data))
+    except UnidentifiedImageError as e:
+        return jsonify({'error': 'Invalid image format'}), 400
+
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    image.save(temp, format='JPEG')
+
+    loaded_image = face_recognition.load_image_file(temp.name)
+    locations = face_recognition.face_locations(loaded_image)
+    encodings = face_recognition.face_encodings(loaded_image, locations)
+
+    attndees = []
+    draw = ImageDraw.Draw(image)
+
+    for location, encoding in zip(locations, encodings):
+        top, right, bottom, left = location
+        data = query(encoding.tolist(), top_k=1, include_metadata=True, include_values=True)
+
+        if data.matches[0].score >= TRESHOLD:
+            name = data.matches[0].metadata['name']
+            attndees.append(name)
+
+            # Draw a square around the face
+            draw.rectangle([left, top, right, bottom], outline="red", width=2)
+
+            # Annotate the image with the name
+            draw.text((left, top - 10), name, fill="red")
+
+    temp.close()
+
+    # Save the annotated image to a file
+    annotated_image_filename = f"{uuid.uuid4()}_annotated.jpg"
+    annotated_image_path = os.path.join(ANNOTATED_IMAGES_DIR, annotated_image_filename)
+    image.save(annotated_image_path, format='JPEG')
+
+    # Return the URL of the annotated image
+    annotated_image_url = f"/get_annotated_image/{annotated_image_filename}"
+    return jsonify({'attendees': attndees, 'annotated_image_url': annotated_image_url}), 200
+
+@app.route('/get_annotated_image/<filename>')
+def get_annotated_image(filename):
+    return send_from_directory(ANNOTATED_IMAGES_DIR, filename)
 
 if __name__ == '__main__':
     app.run(port=8000, debug=True)
