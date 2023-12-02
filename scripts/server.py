@@ -103,6 +103,8 @@ def attendance():
 
             # Annotate the image with the name
             draw.text((left, top - 10), name, fill="red")
+        else:
+            draw.rectangle([left, top, right, bottom], outline="yellow", width=2)
 
     temp.close()
 
