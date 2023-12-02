@@ -1,6 +1,6 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from PIL import Image
+from PIL import Image, ImageDraw
 import io
 import face_recognition
 import uuid
@@ -8,6 +8,8 @@ from pinecone_client import upsert, query
 import tempfile
 import os
 
+
+TRESHOLD = 0.95
 
 app = Flask(__name__)
 CORS(app, support_credentials=True, resources={r"/*": {"origins": "*"}})
@@ -57,15 +59,31 @@ def attendance():
     encodings = face_recognition.face_encodings(loaded_image, locations)
 
     attndees = []
-    for encoding in encodings:
+    draw = ImageDraw.Draw(image)
+
+    for location, encoding in zip(locations, encodings):
+        top, right, bottom, left = location
         data = query(encoding.tolist(), top_k=1, include_metadata=True, include_values=True)
-        print(data)
-        if data.matches[0].score >= 0.9:
-            attndees.append(data.matches[0].metadata['name'])
+
+        if data.matches[0].score >= TRESHOLD:
+            name = data.matches[0].metadata['name']
+            attndees.append(name)
+
+            # Draw a square around the face
+            draw.rectangle([left, top, right, bottom], outline="red", width=2)
+
+            # Annotate the image with the name
+            draw.text((left, top - 10), name, fill="red")
 
     temp.close()
     os.unlink(temp.name)
-    return attndees, 200
+
+    # Save the annotated image to a bytes buffer
+    annotated_image_buffer = io.BytesIO()
+    image.save(annotated_image_buffer, format='JPEG')
+
+    # Return the annotated image and the names of attendees
+    return jsonify({'attendees': attndees, 'annotated_image': annotated_image_buffer.getvalue().hex()}), 200
 
 if __name__ == '__main__':
     app.run(port=8000,debug=True)
