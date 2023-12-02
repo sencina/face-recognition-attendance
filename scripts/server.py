@@ -53,6 +53,8 @@ def upload_image(name):
 
     encoding = face_encodings[0].tolist()
 
+    name = name.replace('-', ' ')
+
     vectors = []
     user_id = str(uuid.uuid4())
     vectors.append({
@@ -98,8 +100,10 @@ def attendance():
     for location, encoding in zip(locations, encodings):
         top, right, bottom, left = location
         data = query(encoding.tolist(), top_k=1, include_metadata=True, include_values=True)
+        print(data)
 
         if data.matches[0].score >= TRESHOLD:
+            print(data.matches[0].metadata['name'], "MATCHED")
             name = data.matches[0].metadata['name']
             attndees.append(name)
 
