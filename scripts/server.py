@@ -8,7 +8,7 @@ from pinecone_client import upsert, query
 import tempfile
 import os
 
-TRESHOLD = 0.95
+TRESHOLD = 0.9
 
 app = Flask(__name__)
 CORS(app, support_credentials=True, resources={r"/*": {"origins": "*"}})
@@ -69,7 +69,12 @@ def upload_image(name):
     temp.close()
     os.unlink(temp.name)
 
-    return jsonify({'message': 'Face detected and tagged successfully', 'tagged_image': tagged_image_buffer.getvalue().hex()}), 201
+    # Return the URL of the tagged image
+    tagged_image_filename = f"{uuid.uuid4()}_tagged.jpg"
+    tagged_image_path = os.path.join(ANNOTATED_IMAGES_DIR, tagged_image_filename)
+    loaded_image_pil.save(tagged_image_path, format='JPEG')
+    tagged_image_url = f"/get_annotated_image/{tagged_image_filename}"
+    return jsonify({'message': 'Face detected and tagged successfully', 'tagged_image_url': tagged_image_url}), 201
 
 
 @app.route('/attendance', methods=['POST'])
@@ -99,12 +104,12 @@ def attendance():
             attndees.append(name)
 
             # Draw a square around the face
-            draw.rectangle([left, top, right, bottom], outline="red", width=2)
+            draw.rectangle([left, top, right, bottom], outline="green", width=2)
 
             # Annotate the image with the name
-            draw.text((left, top - 10), name, fill="red")
+            draw.text((left, top - 10), name, fill="green")
         else:
-            draw.rectangle([left, top, right, bottom], outline="yellow", width=2)
+            draw.rectangle([left, top, right, bottom], outline="red", width=2)
 
     temp.close()
 
