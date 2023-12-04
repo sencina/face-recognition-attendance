@@ -9,7 +9,7 @@ run ```pip install -r requirements.txt```
 you are all done to run the project!
 
 ## Steps to run the project
-run ```cd scripts```
+run ```cd scripts``` 
 
 run ```python server.py```
 
